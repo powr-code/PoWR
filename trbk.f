@@ -1,0 +1,8 @@
+      SUBROUTINE TRBK
+
+      WRITE (*,*) 'TRACE BACK FACILITY (TRBK) IS NOT AVAILABLE AT',
+     >            ' DEC/OSF1 AT THE MOMENT'
+
+      CALL ABORT()
+      RETURN
+      END

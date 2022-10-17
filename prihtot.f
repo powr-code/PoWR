@@ -1,0 +1,36 @@
+      SUBROUTINE PRIHTOT (HTOT,ND,LSHTOT,JOBNUM,MODHEAD)
+C**********************************************************************
+C***  PRINTOUT OF THE CONTINUUM FLUX(EXPRESSED AS T-EFF)
+C***       AS FUNCTION OF DEPTH-INDEX L
+C***  THIS OUTPUT MAY BE USEFUL TO INSPECT FLUX CONSERVATION.
+C***  CALLED FROM: COMO
+C**********************************************************************
+
+C***  DARR AND TARR ARE USED TO PLOT THE STRATIFICATION OF HTOT
+      DIMENSION HTOT (ND)
+
+C***  STEBOL = STEFAN-BOLTZMANN CONSTANT / PI (ERG/CM**2/SEC/STERAD/KELVIN**4
+      DATA STEBOL /1.8046E-5/
+      CHARACTER SIGNUM*1,MODHEAD*100
+
+
+      PRINT 1,MODHEAD,JOBNUM
+    1 FORMAT (1H1,A,20X,'JOB NO.',I3,//
+     $  10X,'TOTAL CONTINUUM FLUX AS FUNCTION OF DEPTH',/,
+     $  10X,41('-'),//,20X,'DEPTH INDEX L          TEFF(L)',/)
+
+      DO 2 L=2,ND
+        IF (((L-1)/LSHTOT)*LSHTOT .NE. (L-1) 
+     $    .AND. L .NE. 2  .AND.  L .NE. ND) GOTO 2
+        TEFF=(4.*ABS(HTOT(L))/STEBOL)**0.25
+        IF (HTOT(L) .GE. .0) THEN
+           SIGNUM=' '
+        ELSE
+           SIGNUM='-'
+        ENDIF
+        PRINT 3, L,SIGNUM,TEFF
+    3   FORMAT (20X,I11,5X,A1,F12.0)
+    2 CONTINUE
+
+      RETURN
+      END

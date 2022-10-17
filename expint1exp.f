@@ -1,0 +1,56 @@
+      FUNCTION EXPINT1EXP(U)
+C***********************************************************************
+C***  CALCULCATES EXPONENTIAL INTEGRAL TIMES EXP: E1(U)*EXP(U)
+C***  SEE EXPINT1 FOR MORE INFORMATION
+C***  CALLED BY CBBN, CBBFE, CBBMORE
+C***********************************************************************
+
+      IMPLICIT NONE
+
+      REAL, INTENT(IN) :: U
+      REAL, DIMENSION(16) :: CF
+      REAL :: E1, EXPINT1EXP
+      INTEGER :: N
+      
+      REAL, PARAMETER :: GAMMA = -0.57721566490153  !Euler-Mascheroni constant
+      DATA CF
+     1/.29871733327421E-14,-.50981091545465E-13
+     2,.81933897126640E-12,-.12353110643709E-10
+     3,.17397297489890E-09,-.22774643986765E-08
+     4,.27557319223986E-07,-.30619243582206E-06
+     5,.3100198412698E-05,-.28344671201814E-04
+     6,.23148148148148E-03,-.1666666666667E-02
+     7,.10416666666667E-01,-.55555555555556E-01
+     8,.25000000000000    ,-.10000000000000E+01/
+
+C***  EXPINT1 IS ONLY DEFINED FOR POSITIVE ARGUMENTS
+      IF (U <= 0.) THEN
+         CALL REMARK (' EXPINT1EXP: ARGUMENT OUT OF RANGE')
+         PRINT *, 'EXPINT1EXP: ARGUMENT OUT OF RANGE: ',U
+         STOP 'ERROR in EXPINT1EXP'
+
+C***  ARGUMENT .LE. 1.:
+      ELSE IF (U <= 1.) THEN
+         E1=0.
+         DO N=1,16
+           E1=(E1+CF(N))*U
+         ENDDO
+         EXPINT1EXP=GAMMA-ALOG(U)-E1
+         EXPINT1EXP=EXPINT1EXP*EXP(U)
+
+C***  ARGUMENT .GT. 1.:
+      ELSE
+         E1 =
+     1       (  .2677737343+U*
+     2       ( 8.6347608925+U*
+     3       (18.0590169730+U*
+     4       ( 8.5733287401+U))))/
+     5       ( 3.9584969228+U*
+     6       (21.0996530827+U*
+     7       (25.6329561486+U*
+     8       ( 9.5733223454+U))))
+         EXPINT1EXP = E1 / U
+      ENDIF
+
+      RETURN
+      END

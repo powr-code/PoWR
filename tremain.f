@@ -1,0 +1,5 @@
+      SUBROUTINE TREMAIN(TIME)
+
+      STOP 'NO TREMAIN ON DEC/OSF'
+
+      END

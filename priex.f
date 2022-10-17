@@ -1,0 +1,66 @@
+      SUBROUTINE PRIEX (ND,N,RNE,LEVEL,POPNUM,JOBNUM,MODHEAD,LSPOP,
+     $                  TNEW,NOTEMP)
+C***********************************************************************
+C***  OUTPUT OF EXTRAPOLATED POPNUMBERS (AND TEMPERATURE)
+C***********************************************************************
+
+      IMPLICIT NONE
+
+      INTEGER, INTENT(IN) :: ND, N, JOBNUM
+      REAL, INTENT(IN) :: LSPOP
+      REAL, DIMENSION(ND), INTENT(IN) :: RNE, TNEW
+      REAL, DIMENSION(ND,N), INTENT(IN) :: POPNUM
+      CHARACTER(100), INTENT(IN) :: MODHEAD
+      CHARACTER(10), DIMENSION(N), INTENT(IN) :: LEVEL
+      LOGICAL, INTENT(IN) :: NOTEMP
+
+      CHARACTER(12), DIMENSION(10) :: VALUE
+      INTEGER :: L, J, J1, J2
+
+      PRINT 1,MODHEAD,JOBNUM
+    1 FORMAT (1X,  A,  20X,'JOB NO.',I7,
+     $ //,20X,'RELATIVE NON-LTE POPULATION NUMBERS EXTRAPOLATED ',
+     $ 'FROM THE LAST THREE ITERATIONS',/,20X,79('-'))
+      J1=1
+    4 J2=MIN0(N,J1+9)
+      PRINT 2, (LEVEL(J),J=J1,J2)
+    2 FORMAT (//,'  L EL.DENS.',10(2X,A10))
+      IF (N.LT.J2) PRINT 11
+   11 FORMAT (1X)
+      PRINT 11
+      DO 3 L=1,ND
+      IF(((L-1)/LSPOP)*LSPOP.NE.(L-1) .AND. L.NE.ND) GOTO 3
+
+      DO 93 J=J1, J2
+      IF (POPNUM(L,J) .GT. .0) THEN
+         WRITE (VALUE(J),'(F12.2)') ALOG10(POPNUM(L,J))
+         ELSE IF (POPNUM(L,J) .LT. .0) THEN
+         VALUE(J) = '* NEGATIVE *'
+         ELSE
+         VALUE(J) = '*** ZERO ***'
+         ENDIF
+
+   93 CONTINUE
+
+      PRINT 9, L,RNE(L), (VALUE(J), J=J1,J2)
+    9 FORMAT (I3,F7.3,2X,10A12)
+    3 CONTINUE
+      IF (J2.EQ.N) GOTO 99
+      J1=J1+10
+      GOTO 4
+
+C***  PRINTOUT OF THE TEMPERATURE STRATIFICATION
+   99 CONTINUE
+      IF (.NOT. NOTEMP) THEN
+      PRINT 10
+   10 FORMAT (///,40X,'TEMPERATURE STRATIFICATION',/,40X,26('='),
+     $   //,40X,'DEPTH INDEX      T (KELVIN)',/)
+      DO 12 L=1,ND
+      IF(((L-1)/LSPOP)*LSPOP.NE.(L-1) .AND. L.NE.ND) GOTO 12
+      PRINT 13, L,TNEW(L)
+   13 FORMAT (40X,I10,F15.0)
+   12 CONTINUE
+      ENDIF
+
+      RETURN
+      END

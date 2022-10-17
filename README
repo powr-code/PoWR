@@ -1,0 +1,7 @@
+
+This tarball contains all necessary Fortan source code files to compile
+the PoWR programs.
+
+Additionally : interfacebib.inc Makefile README
+
+Version from 09.08.2022

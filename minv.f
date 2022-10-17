@@ -1,0 +1,6 @@
+      SUBROUTINE MINV
+
+      STOP 'MINV NOT IMPLEMENTED AT DEC/OSF'
+
+      RETURN
+      END

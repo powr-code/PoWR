@@ -1,0 +1,8 @@
+      SUBROUTINE MY_CLOCK (STRING)
+
+      CHARACTER*8 STRING
+
+      CALL TIME(STRING)
+
+      RETURN
+      END

@@ -1,0 +1,183 @@
+      SUBROUTINE GAUNTFF (GIII,NCHARGE,XLAM,TEMP)
+C***********************************************************************
+C***  THE MODULE COMPUTES THE G-III FACTOR FOR THERMAL BREMSSTRAHLUNG
+C***  GIII = GAUNT FACTOR
+C***  NCHARGE = REST CHARGE OF ION ( =1 FOR H+ AND HE+, =2 FOR HE++ )
+C***  XLAM    = WAVELEGTH IN ANGSTROEM
+C***  TEMP    = TEMPERATURE IN KELVIN
+C***  THE GAUNT FACTORS ARE COMPILED FROM THE PUPLICATIONS OF BERGER (1956)
+C***  APJ 124,P550  AND KARZAS AND LATTER (1961) APJ SUPPL 6,P167 (FIG 3,4,5)
+C***  TO GET THE HERE TABULATED VALUES BICUBIC SPLINE INTERPOLATION WAS USED
+C***  --------  TABULATED RANGE FOR NCHARGE = 1  -----------------------
+C***  TEMPERATURE (KELVIN)             :  1577  ...  157 700
+C***  WAVELENGTH (ANGSTROEM)           :   120  ...  1.2 E6
+C***********************************************************************
+ 
+      COMMON /GIIIERR/  NTUP,NTLOW,NFUP,NFLOW,NHELP
+
+      PARAMETER ( MAXION = 27 )
+ 
+      REAL A(21,21)
+      DIMENSION ZLOG(MAXION)
+ 
+      DATA      ZLOG / 0.     , 0.30103, 0.47712, 0.60206, 0.69897,
+     >                 0.77815, 0.84510, 0.90309, 0.95424, 1.0    ,
+     >                 1.04139, 1.07918, 1.11394, 1.14613, 1.17609, 
+     >                 1.20412, 1.23045, 1.25527, 1.27875, 1.30103,
+     >                 1.32222, 1.34232, 1.36173, 1.38021, 1.39794,
+     >                 1.41497, 1.43136 /
+      DATA ((A(I,J),I=1,21),J=1,6) /
+     $ 1.331, 1.274, 1.232, 1.200, 1.177, 1.158, 1.143, 1.130, 1.120,
+     * 1.115, 1.112, 1.108, 1.103, 1.100, 1.100, 1.101, 1.098, 1.090,
+     $ 1.080, 1.069, 1.057,
+     $ 1.412, 1.347, 1.299, 1.258, 1.214, 1.173, 1.145, 1.132, 1.126,
+     * 1.122, 1.118,1.114, 1.110, 1.106, 1.102, 1.099, 1.098, 1.096,
+     * 1.090, 1.078, 1.060,
+     $ 1.503, 1.418, 1.350, 1.289, 1.230, 1.178, 1.146, 1.133, 1.129,
+     * 1.125, 1.121, 1.117, 1.113, 1.109, 1.104, 1.100, 1.100, 1.100,
+     $1.098, 1.084, 1.062,
+     $ 1.601, 1.489, 1.394, 1.311, 1.239, 1.182, 1.148, 1.135, 1.131,
+     $ 1.128, 1.123, 1.119, 1.115, 1.111, 1.106, 1.102, 1.102, 1.105,
+     $ 1.102, 1.087, 1.064,
+     $ 1.704, 1.566, 1.443, 1.338, 1.254, 1.193, 1.157, 1.142, 1.136,
+     $ 1.131, 1.126, 1.121, 1.118, 1.114, 1.109, 1.105, 1.105, 1.104,
+     $ 1.103, 1.087, 1.064,
+     $ 1.807, 1.652, 1.509, 1.386, 1.288, 1.218, 1.176, 1.156, 1.147,
+     * 1.139, 1.131, 1.126, 1.122, 1.119, 1.114, 1.110, 1.109, 1.107,
+     $ 1.101, 1.085, 1.063 /
+      DATA ((A(I,J),I=1,21),J=7,12) /
+     $ 1.911, 1.750, 1.600, 1.466, 1.352, 1.264, 1.207, 1.179, 1.165,
+     $ 1.153, 1.142, 1.129, 1.126, 1.126, 1.121, 1.116, 1.111, 1.106,
+     $ 1.096, 1.081, 1.060,
+     $ 2.016, 1.849, 1.702, 1.562, 1.431, 1.322, 1.248, 1.209, 1.188,
+     $ 1.172, 1.158, 1.142, 1.136, 1.135, 1.130, 1.122, 1.114, 1.104,
+     $ 1.091, 1.076, 1.059,
+     $ 2.121, 1.947, 1.790, 1.644, 1.500, 1.375, 1.288, 1.241, 1.216,
+     $ 1.196, 1.179, 1.158, 1.149, 1.145, 1.137, 1.128, 1.116, 1.103,
+     $ 1.090, 1.076, 1.061,
+     $ 2.226, 2.046, 1.876, 1.713, 1.561, 1.429, 1.335, 1.281, 1.250,
+     $ 1.225, 1.204, 1.177, 1.164, 1.157, 1.144, 1.132, 1.119, 1.105,
+     $ 1.091, 1.078, 1.064,
+     $ 2.331, 2.146, 1.970,1.802, 1.644,  1.507, 1.407, 1.343, 1.301,
+     $ 1.265, 1.234, 1.201, 1.182, 1.172, 1.145, 1.138, 1.122, 1.105,
+     $ 1.090, 1.076, 1.061,
+     $ 2.500, 2.307, 2.123, 1.947, 1.766, 1.623, 1.513, 1.435, 1.374,
+     $ 1.318, 1.268, 1.229, 1.204, 1.189, 1.168, 1.147, 1.126, 1.105,
+     $ 1.085, 1.067, 1.046 /
+      DATA ((A(I,J),I=1,21),J=13,18) /
+     $ 2.659, 2.460, 2.268,2.084, 1.907, 1.755, 1.633, 1.539, 1.458,
+     $ 1.379, 1.309, 1.262, 1.229, 1.208, 1.185, 1.158, 1.132, 1.106,
+     $ 1.081, 1.055, 1.026,
+     $ 2.809, 2.604, 2.407, 2.217, 2.035, 1.873, 1.740, 1.634, 1.538,
+     $ 1.442, 1.356, 1.300, 1.259, 1.230, 1.202, 1.172, 1.141, 1.112,
+     $ 1.082, 1.049, 1.012,
+     $ 2.953, 2.743, 2.541, 2.345, 2.156, 1.973, 1.830, 1.714, 1.610,
+     $ 1.506, 1.410, 1.344, 1.294, 1.255, 1.221, 1.187, 1.155, 1.124,
+     $ 1.090, 1.050, 1.005,
+     $ 3.091, 2.878, 2.670, 2.469, 2.276, 2.090, 1.923, 1.797, 1.683,
+     $ 1.573, 1.471, 1.394, 1.333, 1.285, 1.242, 1.204, 1.170, 1.136,
+     $ 1.099, 1.054, 1.001,
+     $ 3.261, 3.042, 2.829, 2.622, 2.421, 2.227, 2.039, 1.895, 1.766,
+     $ 1.646, 1.537, 1.451, 1.378, 1.319, 1.268, 1.224, 1.184, 1.146,
+     $ 1.104, 1.055, 0.997,
+     $ 3.432, 3.208, 2.989, 2.776, 2.569, 2.368, 2.175, 2.008, 1.858,
+     $ 1.725, 1.610, 1.514, 1.429, 1.358, 1.299, 1.246, 1.199, 1.155,
+     $ 1.108, 1.054, 0.993 /
+      DATA ((A(I,J),I=1,21),J=19,21) /
+     $ 3.593, 3.365, 3.142, 2.924, 2.711, 2.505, 2.305, 2.127, 1.956,
+     $ 1.811, 1.689, 1.583, 1.485, 1.403, 1.335, 1.271, 1.216, 1.166,
+     $ 1.114, 1.057, 0.994,
+     $ 3.747, 3.515, 3.289, 3.067, 2.850, 2.638, 2.432, 2.233, 2.055,
+     $ 1.903, 1.776, 1.660, 1.549, 1.455, 1.374, 1.301, 1.239, 1.183,
+     $ 1.127, 1.066, 1.001,
+     $ 3.895, 3.661, 3.431, 3.205, 2.984, 2.768, 2.558, 2.354, 2.152,
+     $ 2.000, 1.873, 1.743, 1.620, 1.513, 1.415, 1.336, 1.269, 1.209,
+     $ 1.151, 1.083, 1.018 /
+ 
+      DATA NHELP / 0 /
+
+C***  LOGARITHM OF TEMP AND XLAM
+      TEMPLOG=ALOG10(TEMP)
+      XLAMLOG=ALOG10(XLAM)
+      GOTO 1
+ 
+C***  ENTRY FOR CALLING WITH LOGARITHMIC ARGUMENTS
+      ENTRY GFFLOG (GIII,NCHARGE,XLOG,TLOG)
+      XLAMLOG=XLOG
+      TEMPLOG=TLOG
+    1 CONTINUE
+ 
+      IF (NCHARGE .LE. 0 .OR. NCHARGE .GT. MAXION) THEN
+         CALL REMARK ('NCHARGE OUTSIDE VALID RANGE')
+         STOP 'ERROR in Subr. GAUNTFF'
+         ENDIF
+ 
+C***  AT THE FIRST CALL WITHIN A MAIN PROGRAMM, THE COUNTERS ARE SET ZERO.
+C***  THESE COUNTERS INDICATE HOW OFTEN THIS ROUTINE HAS BEEN CALLED
+C***  WITH PARAMETERS OUTSIDE OF THE TABULATED RANGE.
+      IF (NHELP .EQ. 0) THEN
+         NHELP=1
+         NTUP=0
+         NTLOW=0
+         NFUP=0
+         NFLOW=0
+      ENDIF
+ 
+C***  SCALE TEMP AND XLAM WITH THE REST IONIC CHARGE
+      XZLOG=XLAMLOG+2.*ZLOG(NCHARGE)
+      TZLOG=TEMPLOG-2.*ZLOG(NCHARGE)
+ 
+C***  CALCULATE TABULAR INDICES (BROKEN NUMBERS)
+      AT=10.*TZLOG    -30.98364
+      AF=31.3944035-5.*XZLOG
+ 
+      MT=AT
+C***  LOWER TEMPERATURE BOUNDARY
+      IF (MT.LT.1) THEN
+         MT=1
+         AT=1.
+         NTLOW=NTLOW+1
+         ENDIF
+C***  UPPER TEMPERATURE BOUNDARY
+      IF (MT.GT.20) THEN
+         MT=20
+         AT=20.
+         NTUP=NTUP+1
+         ENDIF
+ 
+      MF=AF
+C***  LOWER FREQUENCY BOUNDARY
+      IF (MF.LT.1) THEN
+         MF=1
+         AF=1.
+         NFLOW=NFLOW+1
+         ENDIF
+C***  UPPER FREQUENCY BOUNDARY
+      IF (MF.GT.20) THEN
+         GIII=1.
+C***     THIS APPROXIMATION BECOMES WORSE IN THE X-RAY REGION.
+C***     BEYOND NU=10**17 BETTER VALUES SHOULD BE CALCULATED
+         IF (MF .GT. 24) NFUP=NFUP+1
+         RETURN
+         ENDIF
+ 
+C***  INTERPOLATION
+      XF=AF-MF
+      GF1=A(MF,MT)+XF*(A(MF+1,MT)-A(MF,MT))
+      GF2=A(MF,MT+1)+XF*(A(MF+1,MT+1)-A(MF,MT+1))
+      GIII=GF1+(AT-MT)*(GF2-GF1)
+
+      IF (GIII < 0.) THEN
+        WRITE (0,*) "XLAM=", XLAM, " TEMP=", TEMP
+        WRITE (0,*) "TZLOG=", TZLOG, " ZLOG(NCHARGE)=", ZLOG(NCHARGE)
+        WRITE (0,*) "MF=", MT, " MT=", MT
+        WRITE (0,*) "GF1=", GF1, " GF2=", GF2
+        WRITE (0,*) "AT=", AT, " AT-MT=", AT-MT
+        WRITE (0,*) "negativer Gauntfaktor: ", GIII
+        STOP "------- FATAL ERROR: SOMETHING IS TOTALLY WRONG -------"
+      ENDIF
+ 
+c      giii = 1.
+
+      RETURN
+      END

@@ -1,0 +1,82 @@
+      SUBROUTINE SFITPLO (ENTOT,ETAL,OPAL,ND,MBOUND,AFIT,KPLUS1,XLAM, 
+     >                    XKOEFF, TRADBOUND)
+
+C************************************************************************
+C***  TEST PLOT OF SELECTED LINE SOURCE FUNCTION (RADIATION TEMPERATURE)
+C***  VERSUS NUMBER DENSITY (AS DEPTH PARAMETER)
+C***  AND COMPARISON WITH THE INTERPOLATION POLYNOM CALCULATED FOR
+C***  VERSION 4 OF THE OUTER BOUNDARY CONDITIONS
+C***  CALLED FROM: SUBROUTINE SFIT
+C************************************************************************
+
+      DIMENSION ENTOT(ND),ETAL(ND),OPAL(ND)
+      DIMENSION AFIT(KPLUS1,KPLUS1), XKOEFF(KPLUS1)
+      DIMENSION X(100), Y(100), A(20)
+C***  Operating system:
+      COMMON / COMOS / OPSYS
+      CHARACTER*8 OPSYS
+
+      IF (ND .GT. 100) THEN
+         CALL REMARK ('INSUFFICIENT DIMENSION')
+         PRINT *, 'INSUFFICIENT DIMENSION'
+         STOP 'ERROR'
+         ENDIF
+
+      DO 1 L=1, ND
+      X(L)=ALOG10(ENTOT(L))
+      IF (OPAL(L) .LE. 0) THEN
+         TRAD=.0
+         ELSE
+         S=ETAL(L)/OPAL(L)
+         TRAD=TRADFUN(XLAM,S)
+         ENDIF
+      Y(L)=TRAD/1000.
+    1 CONTINUE
+
+      XMIN=7.
+      XMAX=16.
+      XSCALE=2.5
+      XTICK=1.
+      XABST=3.
+
+      YMIN=0.
+      YMAX=80.
+      YSCALE=0.
+      YTICK=5.
+      YABST=10.
+
+      OPEN (2, FILE='PLOT', STATUS='UNKNOWN')
+      CALL JSYMSET ('G2','TRANSFER')
+      CALL PLOTANF (2
+     $ ,'TESTPLOT: SOURCE FUNCTION AND FIT CURVE'
+     $ ,'TESTPLOT: SOURCE FUNCTION AND FIT CURVE'
+     $ ,'LOG OF NUMBER DENSITY / (CM**-3)'
+     $ ,'TRAD / kK'
+     $ ,XSCALE,XMIN,XMAX,XTICK,XABST,0.
+     $ ,YSCALE,YMIN,YMAX,YTICK,YABST,0.
+     $ ,X,Y,ND,2)
+
+C***  INTERPOLATION POLYNOM
+      IFAIL=0
+C***  COEFFICIENT VECTOR A
+      DO 3 I=1,KPLUS1
+      A(I)=AFIT(KPLUS1,I)
+    3 CONTINUE
+      X1=ALOG10(ENTOT(1))
+      XM=ALOG10(ENTOT(MBOUND))
+      DO 2 L=1,MBOUND
+      XL=ALOG10(ENTOT(L))
+      XX= XL - X1
+
+      CALL HORNER (XX, TRAD, KPLUS1, XKOEFF)
+
+      Y(L)=TRAD/1000.
+    2 CONTINUE
+
+      CALL PLOTCON (2,X,Y,MBOUND,5)
+
+      Y(1) = TRADBOUND / 1000.
+      CALL PLOTCONS (2,X1,Y(1),1, 'SYMBOL=8 COLOR=2')
+
+      RETURN
+      END

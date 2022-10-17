@@ -1,0 +1,77 @@
+      SUBROUTINE CONTINT (LA,LB,EMINT,CEMINT,TAUSUM,TAUSUMC,
+     >                    ZRAY,OPARAY,S,SC,LTOT,TAU,TAUC,
+     >                    DTAU,WTAU,WTAUC,MAXXN, POROLENGTHRAY)
+C***********************************************************************
+C***  FORMAL INTEGRATION ALONG A SPECIFIED RAY FROM DEPTH INDEX LA TO LB
+C***  WHICH IS NOT ENTERING A SCATTERING ZONE (ONLY CONTINUUM)
+C***********************************************************************
+
+      DIMENSION ZRAY(LTOT),OPARAY(LTOT),S(LTOT),SC(LTOT)
+      DIMENSION TAU(MAXXN),DTAU(MAXXN),WTAU(MAXXN)
+      DIMENSION TAUC(MAXXN),WTAUC(MAXXN)
+      DIMENSION POROLENGTHRAY(LTOT) 
+
+      IF (LB-LA .LT. 1) THEN
+            CALL REMARK ('LB-LA .LT. 1')
+            STOP 'ERROR'
+            ELSEIF (LA .LT. 1) THEN
+            CALL REMARK ('LA .LT. 1')
+            STOP 'ERROR'
+            ELSEIF (LB .GT. LTOT) THEN
+            CALL REMARK ('LB .GT. LTOT')
+            STOP 'ERROR'
+            ENDIF
+ 
+C***  ESTABLISH DTAU(L) = OPTICAL DEPTH INCREMENT BETWEEN L-1 AND L
+cc      DO 1 L=LA+1,LB
+cc    1 DTAU(L)=0.5*(OPARAY(L)+OPARAY(L-1))*(ZRAY(L-1)-ZRAY(L))
+
+      CALL MACROCLUMP (OPARAY(LA), POROLENGTHRAY(LA), 
+     >                 CORRFAC_MACROCLUMP)
+      OPAL = OPARAY(LA) * CORRFAC_MACROCLUMP
+      DO L=LA+1,LB
+        OPAM = OPAL
+        CALL MACROCLUMP (OPARAY(L), POROLENGTHRAY(L), 
+     >                 CORRFAC_MACROCLUMP)
+        OPAL = OPARAY(L) * CORRFAC_MACROCLUMP
+        DTAU(L)=0.5*(OPAM+OPAL)*(ZRAY(L-1)-ZRAY(L))
+      ENDDO
+ 
+C***  ESTABLISH TAU(L) = OPTICAL DEPTH SCALE
+      TAU(LA) = TAUSUM
+      TAUC(LA) = TAUSUMC
+      DO 2 L=LA+1,LB
+        TAU(L) = TAU(L-1) + DTAU(L)
+        TAUC(L) = TAUC(L-1) + DTAU(L)
+    2 CONTINUE
+      TAUSUM = TAU(LB)
+      TAUSUMC = TAUC(LB)
+ 
+C***  CALCULATE INTEGRATION WEIGHTS EXP(-TAU)*DTAU WHICH MEET INDEX L
+      EXPTAU = EXP(-TAU(LA))
+      EXPTAUC = EXP(-TAUC(LA))
+      WTAU(LA) = EXPTAU + (EXP(-TAU(LA+1)) - EXPTAU) / DTAU(LA+1)
+      WTAUC(LA) = EXPTAUC + (EXP(-TAUC(LA+1)) - EXPTAUC) / DTAU(LA+1)
+      DO 3 L=LA+1,LB-1
+        EXPTAU = EXP(-TAU(L))
+        EXPTAUC = EXP(-TAUC(L))
+C***    WB COMES FROM THE INTERVAL L-1,L
+        WB = (EXP(-TAU(L-1)) - EXPTAU) / DTAU(L)
+        WBC = (EXP(-TAUC(L-1)) - EXPTAUC) / DTAU(L)
+C***    WA COMES FROM THE INTERVAL L, L+1
+        WA = (EXP(-TAU(L+1)) - EXPTAU) / DTAU(L+1)
+        WAC = (EXP(-TAUC(L+1)) - EXPTAUC) / DTAU(L+1)
+        WTAU(L) = WA + WB
+        WTAUC(L) = WAC + WBC
+    3 CONTINUE
+      EXPTAU = EXP(-TAU(LB))
+      EXPTAUC = EXP(-TAUC(LB))
+      WTAU(LB) = -EXPTAU - (EXPTAU - EXP(-TAU(LB-1))) / DTAU(LB)
+      WTAUC(LB) = -EXPTAUC - (EXPTAUC - EXP(-TAUC(LB-1))) / DTAU(LB)
+ 
+C***  INTEGRATION SUM, USING CRAY VECTOR FUNCTION SDOT (SCALAR PRODUCT)
+      EMINT = EMINT + SDOT(LB+1-LA,S(LA),1,WTAU(LA),1)
+      CEMINT = CEMINT + SDOT(LB+1-LA,SC(LA),1,WTAUC(LA),1)
+ 
+      RETURN
+      END

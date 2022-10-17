@@ -1,0 +1,231 @@
+      SUBROUTINE DCOOP (I,DOPA,DETA,XLAMBDA,NF,TL,RNEL,ENTOTL,EN,RSTAR,
+     $                  WCHARM,ND,L,NFEDGE,EXPFAC,NDIM,N,NCHARG,WEIGHT,
+     $                  ELEVEL,EION,EINST,SIGMAKI, KONTLOW,
+     $                  KONTNUP,LASTKON,SIGMAFF,MAXION,NOM,KODAT,
+     $                  SIGMATHK,SEXPOK,EDGEK,MAXATOM,bBLOCKINVERSION)
+C***********************************************************************
+C***  CALLED FROM: SUBROUTINE COMA
+C***  DERIVATIVE OF NON-LTE OPACITY AND EMISSIVITY WITH RESPECT TO EN(I)
+C***  AT CURRENT DEPTH POINT L FOR ALL CONT. FREQUENCIES
+C***  THE FREQUENCY-DEPENDENT BOUND-FREE CROSS SECTION SIGMA (IN CM**2)
+C***  IS TAKEN FROM THE ARRAY SIGMAKI
+C***  ATTENTION: THE DERIVATIVES ARE ONLY CALCULATED CORRECTLY FOR
+C***     THOSE FREQUENCIES AND DEPTH POINTS WHERE THEY ARE NEEDED,
+C***     I.E. IF WCHARM(L.K) > 0   0R  "TEMPERATURE CORRECTIONS" 
+C***  This version (23-Mar-2007) assumes that KODAT positions
+C***  (i.e. KODATIND) give the atomic number (NCORECHARGE)
+C***********************************************************************
+
+      DIMENSION SIGMATHK(MAXATOM,MAXATOM),SEXPOK(MAXATOM,MAXATOM)
+      DIMENSION EDGEK(MAXATOM,MAXATOM)
+      DIMENSION NOM(N),KODAT(MAXATOM)
+      DIMENSION NCHARG(N),WEIGHT(N),ELEVEL(N),EION(N)
+      DIMENSION KONTLOW(LASTKON),KONTNUP(LASTKON),NFEDGE(LASTKON)
+      DIMENSION EXPFAC(NF)
+      DIMENSION EINST(NDIM,NDIM),EN(NDIM)
+      DIMENSION XLAMBDA(NF),DETA(NF),DOPA(NF),WCHARM(ND,NF)
+      DIMENSION SIGMAKI(NF,LASTKON),SIGMAFF(NF,0:MAXION)
+
+C***  Dimension of the core-charge data locally provided here
+      INTEGER, PARAMETER :: MAXATOMDIM = 26
+      DIMENSION KODATIND(MAXATOMDIM)
+ 
+      LOGICAL :: bBLOCKINVERSION
+
+      REAL, PARAMETER :: C1 = 1.4388        !C1 = H * C / K    ( CM * ANGSTROEM )
+      REAL, PARAMETER :: C2 = 3.9724E-16    !C2 = 2 * H * C    ( G * CM**3 / S**2 )
+      REAL, PARAMETER :: C3 = 2.07E-16      !C3 = RECIPROCAL STATISTICAL WEIGHT OF FREE ELECTRON
+ 
+      T32=TL*SQRT(TL)
+
+C***  INITIALIZATION OF THE DERIVATIVE VECTORS
+      DO 10 K=1,NF
+      DETA(K)=.0
+      DOPA(K)=.0
+   10 CONTINUE
+
+C***  IF DERIVATIVE WITH RESPECT TO ELECTRON DENSITY REQUIRED: GOTO 3
+      IF (I .EQ. N+1) GOTO 3
+C***  IF DERIVATIVE WITH RESPECT TO THE TEMPERATURE REQUIRED: GOTO 50
+      IF (I .EQ. N+2) GOTO 50
+ 
+
+C***  BOUND-FREE TRANSITIONS INVOLVING LEVEL I  ********************************
+      DO 2 KON=1, LASTKON
+      NUP=KONTNUP(KON)
+      IF (bBLOCKINVERSION .AND. (NOM(I) /= NOM(NUP))) GOTO 2
+      LOW=KONTLOW(KON)
+
+C***  I IS LOWER LEVEL
+      IF (I .EQ. LOW) THEN
+         DO 11 K=1,NFEDGE(KON)
+         DOPA(K)=DOPA(K)+SIGMAKI(K,KON)
+   11    CONTINUE
+      ENDIF
+
+ 
+C***  I IS UPPER LEVEL
+      IF (I .EQ. NUP) THEN
+         EDGE=ELEVEL(NUP)+EION(LOW)-ELEVEL(LOW)
+         WEPART=C3*RNEL*ENTOTL/T32 *WEIGHT(LOW)/WEIGHT(NUP)
+         DO K=1,NFEDGE(KON)
+C***       RECIPROCAL STATISTICAL WEIGHT OF FREE ELECTRON
+           W = 1.E8 / XLAMBDA(K)
+           G = WEPART * EXP(C1*(EDGE-W)/TL)
+           SIGMA=SIGMAKI(K,KON)
+           DOPA(K)=DOPA(K)-G*SIGMA
+C***       Emissivities are set zero if both levels are equal (=POPMIN)
+C***         i.e. skip the incrementation of DETA in this case:
+           IF (EN(LOW) .NE. EN(NUP)) THEN
+             DETA(K)=DETA(K)+G*SIGMA
+           ENDIF
+         ENDDO
+      ENDIF
+ 
+    2 CONTINUE
+
+
+C***  K-SHELL *******************************************************
+      NOMI = NOM(I)
+      ISTATE = NCHARG(I) + 1
+
+C***  ARE THERE K-SHELL-DATA FOR CURRENT ELEMENT?
+      IF (SIGMATHK(NOMI,ISTATE) .EQ. 0.) GOTO 61
+
+
+C***  Establish KODAT index for each used element
+C***  First find number of used elements
+      NATOMMAX = NOM(N)
+      IF (MAXATOM .GT. MAXATOMDIM) THEN
+         WRITE (0,*) '*** ERROR: MAXATOMDIM TOO SMALL'
+         STOP 'ERROR IN DCOOP'
+      ENDIF
+C***  Now find for each NA the corresponding KODAT index 
+C***     in order to know the core charge
+      DO NA=1, NATOMMAX
+         KODATIND(NA) = 0
+         DO II = 1, MAXATOM
+            IF (NA .EQ. KODAT(II)) KODATIND(NA) = II
+         ENDDO
+         IF (KODATIND(NA) .EQ. 0) THEN
+            WRITE (0,*) '*** ERROR: ELEMENT NOT FOUND'
+            STOP 'ERROR IN COOP'
+         ENDIF
+         IF (KODATIND(NA) .GT. MAXATOMDIM) THEN
+            WRITE (0,*) '*** ERROR: NCORECHARGE NOT FOUND'
+            STOP 'ERROR IN COOP'
+         ENDIF
+      ENDDO
+
+C***  K-SHELL IONIZATION NEEDS IONS WITH AT LEAST 3 ELECTRONS LEFT
+      IF (KODATIND(NOMI)-NCHARG(I) .LT. 3) THEN
+         WRITE (0,*) 'Ionization stage for K-SHELL data invalid'
+         STOP 'ERROR detected by subroutine DCOOP'
+      ENDIF
+      
+      DO K=1,NF
+        W = 1.E+8 / XLAMBDA(K)
+C***    IS RADIATION HARD ENOUGH FOR K-SHELL-IONISATION? 
+        IF (W .LT. EDGEK(NOMI,ISTATE)) EXIT
+        CALL KSIGMA (SIGMAK, SIGMATHK(NOMI,ISTATE), 
+     >               EDGEK(NOMI,ISTATE), W, SEXPOK(NOMI,ISTATE))
+        DOPA(K) = DOPA(K) + SIGMAK
+      ENDDO
+   61 CONTINUE
+
+
+C***  FREE-FREE CONTRIBUTION OF LEVEL I  ***************************************
+      IF (NCHARG(I) .LE. 0) GOTO 4
+      DO 20 K=1,NF
+      IF (WCHARM(L,K) .EQ. .0) GOTO 20
+      SUM=RNEL*ENTOTL*SIGMAFF(K,NCHARG(I))
+      EMINDU=SUM*EXPFAC(K)
+      SUM=SUM-EMINDU
+      DOPA(K)=DOPA(K)+SUM
+      DETA(K)=DETA(K)+EMINDU
+   20 CONTINUE
+      GOTO 4
+ 
+C***  I .EQ. N+1 : DERIVATIVE WITH RESPECT TO ELECTRON DENSITY  ================
+    3 CONTINUE
+C***  BOUND-FREE OPACITIES (DERIVATIVE TO ELECTRON DENSITY) ********************
+      DO 7 KONT=1,LASTKON
+      NUP=KONTNUP(KONT)
+      LOW=KONTLOW(KONT)
+
+C***  Set emissivities zero if both levels are equal (=POPMIN)
+      IF (EN(LOW) .EQ. EN(NUP)) CYCLE
+ 
+      ENNUP=EN(NUP)
+      EDGE=ELEVEL(NUP)+EION(LOW)-ELEVEL(LOW)
+      NFLOW=NFEDGE(KONT)
+C***  NOTE: FACTOR RNEL OMITTED (DERIVATIVE TO ELECTRON DENSITY)
+      WEPART = C3* ENTOTL/T32 *WEIGHT(LOW)/WEIGHT(NUP)
+      DO 40 K=1,NFLOW
+        SIGMA=SIGMAKI(K,KONT)
+C***  G DIVIDED BY RNEL
+        W = 1.E8 / XLAMBDA(K)
+        G = WEPART * EXP(C1*(EDGE-W)/TL)
+        DETA(K)=DETA(K)+G*SIGMA*ENNUP
+        DOPA(K)=DOPA(K)-G*SIGMA*ENNUP
+   40 CONTINUE
+ 
+    7 CONTINUE
+ 
+C***  FREE-FREE OPACITIES (DERIVATIVE TO ELECTRON DENSITY) *********************
+      DO 30 K=1,NF
+      IF (WCHARM(L,K) .EQ. .0) GOTO 30
+      DO 6 J=1,N
+      SUM=ENTOTL*EN(J)*SIGMAFF(K,NCHARG(J))
+      EMINDU=SUM*EXPFAC(K)
+      SUM=SUM-EMINDU
+      DOPA(K)=DOPA(K)+SUM
+      DETA(K)=DETA(K)+EMINDU
+    6 CONTINUE
+   30 CONTINUE
+      GOTO 4
+
+ 
+C***  I=N+2: DERIVATIVE WITH RESPECT TO THE TEMPERATURE  =======================
+   50 CONTINUE
+C***  BOUND-FREE  ******************************************************
+      DO 51 KONT=1,LASTKON
+      NUP=KONTNUP(KONT)
+      LOW=KONTLOW(KONT)
+      EDGE=ELEVEL(NUP)+EION(LOW)-ELEVEL(LOW)
+      WEPART = C3*RNEL*ENTOTL/T32 *WEIGHT(LOW)/WEIGHT(NUP)
+      NFLOW=NFEDGE(KONT)
+      DO 54 K=1,NFLOW
+        W=1.E8/XLAMBDA(K)
+        SIGMA=SIGMAKI(K,KONT)
+C***  RECIPROCAL STATISTICAL WEIGHT OF FREE ELECTRON
+        G = WEPART*EXP(C1*(EDGE-W)/TL)
+        DETABF=G*EN(NUP)*SIGMA*(C1*(W-EDGE)/TL-1.5)/TL
+        DOPA (K)=DOPA (K)-DETABF
+        DETA(K)=DETA(K)+DETABF
+   54 CONTINUE
+   51 CONTINUE
+
+ 
+C***  FREE-FREE  *******************************************************
+      DO 55 K=1,NF
+      W=1.E8/XLAMBDA(K)
+      DO 56 J=1,N
+      PREETA=RNEL*ENTOTL*EN(J)*SIGMAFF(K,NCHARG(J))
+      DETAFF=PREETA*EXPFAC(K)*(C1*W/TL-0.5)/TL
+      DOPAFF=DETAFF+0.5*PREETA/TL
+      DOPA (K)=DOPA (K)-DOPAFF
+      DETA (K)=DETA (K)+DETAFF
+   56 CONTINUE
+   55 CONTINUE
+ 
+    4 CONTINUE
+      DO 1 K=1,NF
+      W=1.E8/XLAMBDA(K)
+      W3=W*W*W
+      DOPA(K)=DOPA(K)*ENTOTL*RSTAR
+      DETA(K)=DETA(K)*ENTOTL*RSTAR*C2*W3
+    1 CONTINUE
+ 
+      RETURN
+      END

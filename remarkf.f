@@ -1,0 +1,8 @@
+      SUBROUTINE REMARKF (LABEL, A, B)
+
+      CHARACTER*(*) LABEL
+
+      WRITE (0,LABEL) A, B
+
+      RETURN
+      END

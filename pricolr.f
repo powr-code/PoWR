@@ -1,0 +1,276 @@
+      SUBROUTINE PRICOLR (NF,XLAMBDA,EMFLUX,RSTAR,FWEIGHT)
+C***********************************************************************
+C***  CALCULATION AND PRINTOUT OF MAGNITUDES AND COLOR INDICES
+C***  REFERENCES: SMITH,L.: 1968, MNRAS 140, P. 409
+C***              HAYES,D.S. + LATHAM,D.W.: 1975, AP.J. 197, P. 593
+C***              MASSEY,P.: 1984, AP.J. 281, P. 789
+C***              WAMSTEKER,W.: 1981, A+A 97, P. 329
+C***  X-RAYS: EINSTEIN IPC / ROSAT PSPC (COUNT RATES)
+C***********************************************************************
+
+      PARAMETER ( MAXIPC = 20 ) 
+      PARAMETER ( MAXPSPC = 30 ) 
+      PARAMETER ( MAXBAND = 3 )
+      DIMENSION XLAMBDA(NF),EMFLUX(NF)
+      DIMENSION CENTER (12), IBAND(12), COLOR(12), CALCON(12), IDIFF(12)
+      DIMENSION PHIIPC2(MAXIPC), XNUIPC2(MAXIPC), XEVIPC2(MAXIPC)
+      DIMENSION PHIIPC8(MAXIPC), XNUIPC8(MAXIPC), XEVIPC8(MAXIPC)
+      DIMENSION PHIPSPC(MAXPSPC), XNUPSPC(MAXPSPC), XEVPSPC(MAXPSPC)
+      DIMENSION KCNPSPC(MAXBAND+1), FCNPSPC(MAXBAND+1)
+      CHARACTER STRING*10
+
+C***  DATA: MAGNITUDES AND COLOR INIDCES  ------------------------------
+C***  NAMES OF THE CONSIDERED COLOR BANDS
+      DATA IBAND /3HUV1,3HUV2,
+     $            7HSMITH U,7HSMITH B,7HSMITH V,8HMASSEY R,
+     $            8HJ WE=.02,8HH WE=.02,8HK WE=.02,8HL WE=.02,8HM WE=.02
+     $           ,8H(10) BSW/ 
+      DATA IDIFF /1H ,7HUV1-UV2,1H ,3HU-B,3HB-V,3HV-R,6*1H /
+C***  CENTER FREQUENCIES OF THE COLOR BANDS
+      DATA CENTER /1445.,1940.,
+     $             3650.,4270.,5160.,6000.,1.26E4,1.60E4,2.22E4,
+     $             3.54E4,4.8E4,1.E5/
+C***  CALIBRATION CONSTANTS OF THE COLOR BANDS IN MAGNITUDES
+      DATA CALCON / 6*48.64,
+     $              49.488,49.921,50.440,51.605,51.924,53.574/
+C***  SOURCES: U,B,V,R : HAYES + LATHAM
+C***           JHKLM   : CAMPINS ET AL. 1985 ASTRON,J. 90,896
+C***           (10)    : BARLOW,SMITH+WILLIS 1981 MNRAS 196,101
+ 
+C***  DATA: X-RAY VIEW OF W-R STARS  -----------------------------------
+C***  EFFECTIVE AREA OF EINSTEIN IPC (0.2 - 4.0 KEV)
+      NFIPC2=18
+      IF (NFIPC2 .GT. MAXIPC) STOP 'NFIPC2'
+C***  ENERGY VALUES [EV]
+      DATA XEVIPC2 /4001.,4000.,3150.,2300.,2000.,1600.,1200.,800.,680.,
+     $              510.,509.,440.,405.,260.,259.,210.,200.,199./
+C***  EFFECTIVE AREA [CM^2]
+      DATA PHIIPC2 /0.1, 31.3, 73.1, 140., 140., 120., 75., 15.4, 1.,
+     $             0.1, 7.3, 1.3, 0.1, 0.1, 54., 7.3, 7.1, 0.1/
+C***  EFFECTIVE AREA OF EINSTEIN IPC (0.8 - 4.0 KEV)
+      NFIPC8=9
+      IF (NFIPC8 .GT. MAXIPC) STOP 'NFIPC8'
+C***  ENERGY VALUES [EV]
+      DATA XEVIPC8 /4001.,4000.,3150.,2300.,2000.,1600.,1200.,800.,799./
+C***  EFFECTIVE AREA [CM^2]
+      DATA PHIIPC8 /0.1, 31.3, 73.1, 140., 140., 120., 75., 15.4, 0.1/
+C***  EFFECTIVE AREA OF ROSAT PSPC (0.07 - 2.4 KEV)
+      NFPSPC=30
+      IF (NFPSPC .GT. MAXPSPC) STOP 'NFPSPC'
+C***  ENERGY VALUES [EV]
+      DATA XEVPSPC / 3005.0,2692.5,2402.5,2290.2,2205.7,2203.8,2102.5,
+     2               2003.3,1874.4,1712.6,1554.9,1422.5,1367.1,1289.1,
+     3               1180.2,1073.7, 999.1, 949.4, 841.4, 698.6, 532.0,
+     4                527.8, 399.6, 366.3, 283.9, 283.8, 210.6, 147.9,
+     5                109.9,  77.6 /
+      KCNPSPC(1) = 3
+      KCNPSPC(2) = 17
+      KCNPSPC(3) = 23
+      KCNPSPC(4) = 30
+C***  EFFECTIVE AREA [CM^2]
+      DATA PHIPSPC /   2.37,  3.99,  5.91,  7.00,  9.70,  5.72, 19.96,
+     2                55.99, 89.66,129.87,169.85,200.00,210.13,220.06,
+     3               225.52,220.01,209.23,199.70,169.87,114.32, 42.31,
+     4                52.24,  7.64,  2.99,  0.05,262.82,198.14,100.48,
+     5                19.67,  0.01 /
+
+C***  DATA: NUMERICAL CONSTANTS  ---------------------------------------
+      DATA PI/3.1415926535898/
+      DATA HPLANCK/6.625E-27/
+C***  CLIGHT IN CM/S
+      DATA CLIGHT/2.99792458E10/
+C***  1 PARSEC IN CM
+      DATA PARSEC / 3.08561E18 /
+C***  DISTANCE MODULUS OF 10 PARSEC
+      DISMO=-2.5*ALOG10(RSTAR*RSTAR/100./PARSEC/PARSEC )
+C***  END OF DATA STATEMENTS  ==========================================
+
+
+      PRINT 1
+    1 FORMAT (//,10X,'ABSOLUTE MONOCHROMATIC MAGNITUDES AND ',
+     $      'COLOR INDICES',/,10X,51('='),//,
+     $      10X,'BAND      WAVELENGTH  MAGNITUDE',
+     $ 8X,'MAG DIFFERENCES',3X,'COLOR TEMP',8X,'LOG F-L/F-L',/)
+ 
+C***  LOOP OVER ALL COLOR BANDS
+      DO 2 I=1,12
+
+C***  INTERPOLATION OF THE EMERGENT FLUX AT CENTER FREQUENCY
+C***    - NOTE THAT THE ASTROPHYSICAL FLUX MUST BE MULTIPLIED BY PI 
+      WAVENUM = 1.E8 / CENTER(I)
+      IF (CENTER(I) .GT. XLAMBDA(NF)) GOTO 2
+      CALL XRUDI (FCENTER,WAVENUM,EMFLUX,XLAMBDA,1,NF,1)
+
+C*** PREVENT ARITHMETIC ERROR IF FLUX IS ZERO
+      IF (FCENTER .GT. .0) THEN
+         COLOR(I) = -2.5 * ALOG10(FCENTER*PI) + DISMO - CALCON(I)
+         WRITE (STRING, '(F10.3)') COLOR(I)
+        ELSE
+         STRING = '  * ZERO *'
+        ENDIF
+      IF (CENTER(I) .LE. 10000.) THEN
+         IF (IDIFF(I) .EQ. 1H  .OR. FCENTER .LE. .0) THEN
+            PRINT 3, IBAND(I), CENTER(I), STRING
+    3       FORMAT (10X, A8, F10.0, ' A ', A)
+           ELSE
+            ITCOL='        '
+            CALL TCOLOR (CENTER(I-1),CENTER(I),FCM1,FCENTER,ITCOL)
+            COLDIF = COLOR(I-1) - COLOR(I)
+            WAVFAC = ALOG10(CENTER(I)/CENTER(I-1)) * 2.
+            FLDIFF = -0.4 * COLDIF + WAVFAC
+            PRINT 6, IBAND(I), CENTER(I), STRING, IDIFF(I),
+     $           COLDIF, ITCOL, FLDIFF
+    6       FORMAT(10X, A8, F10.0, ' A ', A, 8X, A8, F7.3, 5X, A8, 8X, 
+     >             F7.3)
+           ENDIF
+         ELSE
+         PRINT 4, IBAND(I), CENTER(I)/10000., STRING
+    4    FORMAT (10X, A8, F10.2, ' MU', A)
+         ENDIF
+      FCM1 = FCENTER
+    2 CONTINUE
+
+C***  REDDENING-FREE COLOR INDICES (MASSEY, 1984)
+C***  U-B STATT U-V WIE IN PAPER VON MASSEY         KORRIGIERT AM 27.11.85
+C***  DELTA = (U-B) - 0.68* (B-V)
+      DELTA=COLOR(3)-COLOR(4)-0.68*(COLOR(4)-COLOR(5))
+C***  ETA = (B-V) - 1.46 * (V-R)
+      ETA=COLOR(4)-COLOR(5)-1.46*(COLOR(5)-COLOR(6))
+      PRINT 5,ETA,DELTA
+    5 FORMAT (/,10X,'REDDENING-FREE INDICES (MASSEY, 1984):  ETA=',
+     $      F7.3,10X,'DELTA=',F7.3, /)
+ 
+      CALL PRIJOST(NF,XLAMBDA,EMFLUX,DISMO, FWEIGHT)
+
+
+C***  X-RAY VIEW OF W-R STARS: COUNT RATES  ============================
+      PRINT 11
+   11 FORMAT (///,10X,'X-RAY VIEW: COUNT RATES (PER 100 SEC.) ',
+     $                  'FOR A DISTANCE OF 10 PC',
+     $          /,10X,62('='),
+     $         //,10X,' E(B-V)     HY COL.      ------EINSTEIN IPC',
+     $                  '------',
+     $                   6X,27('-'),'ROSAT PSPC',26('-'),
+     $          /,10X,'[SMITH!]    DENSITY      0.2-4.0 KEV  ',
+     $                  '0.8-4.0 KEV',
+     $                   6X,'A (CN 7-40)',2X,'B (41-240)',2X,'H-R 1',
+     $                   3X,' C (41-100)',2X,'D(101-240)',2X,'H-R 2',/)
+
+C***  CONVERSION: ENERGY [EV]  --->  FREQUENCY [HZ]
+      DO 7 K=1,NFIPC2
+      XNUIPC2(K) = XEVIPC2(K) * 24.2E13
+    7 CONTINUE
+      DO 17 K=1,NFPSPC
+      XNUPSPC(K) = XEVPSPC(K) * 24.2E13
+   17 CONTINUE
+      DO 70 K=1,NFIPC8
+      XNUIPC8(K) = XEVIPC8(K) * 24.2E13
+   70 CONTINUE
+      
+C***  WARNING: ENERGY RANGE OF EINSTEIN IPC 'OUT OF AREA' (FREQUENCY GRID) 
+      XLAMIPC = CLIGHT * 1.E8 / XNUIPC2(1)
+      IF ( XLAMIPC .LT. XLAMBDA(1) ) THEN
+         PRINT 10
+   10    FORMAT(/,10X,'ENERGY RANGE OF EINSTEIN IPC NOT COVERED BY ',
+     >                'FREQUENCY GRID')
+         GOTO 99
+      ENDIF
+   
+C***  SMITH COLOR EXCESS + HYDROGEN COLUMN DENSITY
+      DO 12 M=0,10
+      EBMINV = M*0.1
+C***  TOTAL (HI + H2) HYDROGEN COLUMN DENSITY: BOHLIN ET AL. 
+C***                                           (1978, APJ 224, 132)
+C***  [  JOHNSON COLOR EXCESS: SMITH-EXCESS * 1.23 ]
+      COLDENS = 5.8E21 * EBMINV * 1.23           
+
+C***  X-RAY COUNT RATES
+C***  EINSTEIN IPC: 0.2-4.0 KEV
+      FIPC2 = .0
+      DO 22 K=1,NFIPC2
+        IF (K .EQ. 1) THEN
+           DNUE = 0.5 * ( XNUIPC2(1) - XNUIPC2(2) )
+        ELSE IF (K .EQ. NFIPC2) THEN
+           DNUE = 0.5 * ( XNUIPC2(K-1) - XNUIPC2(K) )
+        ELSE 
+           DNUE = 0.5 * ( XNUIPC2(K-1) -XNUIPC2(K+1) )
+        ENDIF
+        CALL XEXTINC(EXTINC,XEVIPC2(K),COLDENS)
+        XLAMIPC = CLIGHT*1.E8 / XNUIPC2(K)
+        CALL LIPO (FK,XLAMIPC,EMFLUX,XLAMBDA,NF)
+        FIPC2 = FIPC2 + FK / (HPLANCK*XNUIPC2(K)) * PHIIPC2(K)
+     *                     * EXTINC * DNUE
+   22 CONTINUE 
+C***  EINSTEIN IPC: 0.8-4.0 KEV
+      FIPC8 = .0
+      DO 8 K=1,NFIPC8
+        IF (K .EQ. 1) THEN
+           DNUE = 0.5 * ( XNUIPC8(1) - XNUIPC8(2) )
+        ELSE IF (K .EQ. NFIPC8) THEN
+           DNUE = 0.5 * ( XNUIPC8(K-1) - XNUIPC8(K) )
+        ELSE 
+           DNUE = 0.5 * ( XNUIPC8(K-1) -XNUIPC8(K+1) )
+        ENDIF
+        CALL XEXTINC(EXTINC,XEVIPC8(K),COLDENS)
+        XLAMIPC = CLIGHT*1.E8 / XNUIPC8(K)
+        CALL LIPO (FK,XLAMIPC,EMFLUX,XLAMBDA,NF)
+        FIPC8 = FIPC8 + FK / (HPLANCK*XNUIPC8(K)) * PHIIPC8(K)
+     *                     * EXTINC * DNUE
+    8 CONTINUE 
+C***  ROSAT PSPC: CHANNELS 240-7 (I: 240-100, II: 100-40, III: 40-7)
+      DO 28 KBAND= 1, MAXBAND
+      K1=KCNPSPC(KBAND)
+      K2=KCNPSPC(KBAND+1)
+      FPSPC = .0
+      DO 18 K= K1, K2
+        IF (K .EQ. K1) THEN
+           DNUE = 0.5 * ( XNUPSPC(K) - XNUPSPC(K+1) )
+        ELSE IF (K .EQ. K2) THEN
+           DNUE = 0.5 * ( XNUPSPC(K-1) - XNUPSPC(K) )
+        ELSE 
+           DNUE = 0.5 * ( XNUPSPC(K-1) -XNUPSPC(K+1) )
+        ENDIF
+        CALL XEXTINC(EXTINC,XEVPSPC(K),COLDENS)
+        XLPSPC = CLIGHT*1.E8 / XNUPSPC(K)
+        CALL LIPO (FK,XLPSPC,EMFLUX,XLAMBDA,NF)
+        FPSPC = FPSPC + FK / (HPLANCK*XNUPSPC(K)) * PHIPSPC(K)
+     *                     * EXTINC * DNUE
+   18 CONTINUE 
+      FCNPSPC(KBAND) = FPSPC
+   28 CONTINUE
+
+C***  (NORMALIZED) COUNT RATES + HARDNESS RATIOS (ROSAT PSPC)
+      FNORM = PI * (RSTAR*RSTAR/100./PARSEC/PARSEC)
+      CRIPC2 = FIPC2 * FNORM
+      CRIPC8 = FIPC8 * FNORM
+      DPSPC = FCNPSPC(1) * FNORM
+      CPSPC = FCNPSPC(2) * FNORM
+      BPSPC = DPSPC + CPSPC
+      APSPC = FCNPSPC(3) * FNORM
+C***  MIN. FOR HARDNESS RATIOS: 1 PHOTON PER 100 SEC.
+      IF (BPSPC .LT. 0.01) THEN
+         IF (APSPC .LT. 0.01) THEN 
+            PRINT 9, EBMINV, COLDENS, CRIPC2*100., CRIPC8*100., 
+     >                                APSPC*100., BPSPC*100.
+C***        LESS THAN 1 PHOTON PER 100 SEC.: NO FURTHER OUTPUT
+            IF (CRIPC2 .LT. 0.01) GOTO 99
+         ELSE 
+            HR1 = (BPSPC-APSPC)/(BPSPC+APSPC)
+            PRINT 9, EBMINV, COLDENS, CRIPC2*100., CRIPC8*100., 
+     >                                APSPC*100., BPSPC*100., HR1
+         ENDIF
+      ELSE
+         HR1 = (BPSPC-APSPC)/(BPSPC+APSPC)
+         HR2 = (DPSPC-CPSPC)/(DPSPC+CPSPC)
+         PRINT 9, EBMINV, COLDENS, CRIPC2*100., CRIPC8*100., APSPC*100.
+     >                  , BPSPC*100., HR1, CPSPC*100., DPSPC*100., HR2
+    9    FORMAT (12X,F4.1,3X,1PE10.1,0P,4X,2(3X,F10.0),3X,
+     >                                     2(4X,F10.0,2X,F10.0,2X,F5.2))
+      ENDIF
+   12 CONTINUE
+
+
+   99 CONTINUE
+
+      RETURN
+      END

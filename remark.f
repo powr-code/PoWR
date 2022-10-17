@@ -1,0 +1,8 @@
+      SUBROUTINE REMARK (STRING)
+
+      CHARACTER*(*) STRING
+
+      WRITE (0,'(A)') STRING( :IDX(STRING))
+
+      RETURN
+      END
